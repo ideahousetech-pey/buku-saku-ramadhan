@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "231461640296",
+    "project_id": "ramadhan-school-app",
+    "storage_bucket": "ramadhan-school-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231461640296:android:b2185b54186d5426c883dd",
+        "android_client_info": {
+          "package_name": "com.hafeeza.ramadhan_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwThV9EDvcz29u1zrsgnMY5CfloNOtjxU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -80,9 +80,9 @@ flutter:
     - assets/audio/adzan_fajr.mp3
     - assets/images/compass.png
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
   image_path: "assets/icon/app_icon.png"
   adaptive_icon_background: "#1B5E20"
   adaptive_icon_foreground: "assets/icon/app_icon.png"

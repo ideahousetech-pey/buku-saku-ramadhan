@@ -2,17 +2,20 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
+
+    // 🔥 WAJIB Firebase
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.ramadhan_app"
-
-    compileSdk = 36
+    namespace = "com.hafeeza.ramadhan_app"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.ramadhan_app"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 36
+        applicationId = "com.hafeeza.ramadhan_app"
+        minSdk = 23
+        targetSdk = 34
+
         versionCode = 1
         versionName = "1.0"
     }
@@ -33,7 +36,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
 
-        // 🔴 WAJIB UNTUK flutter_local_notifications
+        // 🔴 WAJIB untuk flutter_local_notifications
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -43,7 +46,7 @@ android {
 }
 
 dependencies {
-    // 🔴 WAJIB UNTUK desugaring
+    // 🔴 WAJIB untuk desugaring Java 8+ API
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 

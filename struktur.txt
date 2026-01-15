@@ -1,0 +1,28 @@
+lib/
+│── main.dart
+│
+├── auth/
+│   ├── login_page.dart
+│   └── auth_service.dart
+│
+├── pages/
+│   ├── home_page.dart
+│   ├── sholat_page.dart
+│   ├── kiblat_page.dart
+│   ├── jadwal_page.dart
+│   ├── kalender_page.dart
+│
+├── ramadhan/
+│   ├── checklist_page.dart
+│   ├── recap_guru_page.dart
+│
+├── widgets/
+│   ├── menu_icon.dart
+│   └── sholat_header.dart
+│
+├── services/
+│   ├── prayer_service.dart
+│   ├── notification_service.dart
+│
+└── models/
+    └── checklist_model.dart

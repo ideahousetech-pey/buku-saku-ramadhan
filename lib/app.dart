@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'auth/login_siswa_page.dart';
+import 'app_initializer.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
           seedColor: const Color(0xFF1B5E20),
         ),
       ),
-      home: const LoginSiswaPage(),
+      home: const AppInitializer(),
     );
   }
 }

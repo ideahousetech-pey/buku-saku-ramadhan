@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_core/firebase_core.dart';
 
 import 'auth/login_siswa_page.dart';
 import 'services/notification_service.dart';
@@ -14,46 +14,49 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
-  late Future<void> _initFuture;
+  bool _ready = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _initFuture = _initialize();
+    _init();
   }
 
-  Future<void> _initialize() async {
-    if (!kIsWeb) {
-      await Firebase.initializeApp();
-      await NotificationService.init();
-      await PrayerScheduler.scheduleToday('Jakarta');
+  Future<void> _init() async {
+    try {
+      if (!kIsWeb) {
+        await Firebase.initializeApp();
+        await NotificationService.init();
+        await PrayerScheduler.scheduleToday('Jakarta');
+      }
+      setState(() => _ready = true);
+    } catch (e) {
+      setState(() => _error = e.toString());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _initFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            'Terjadi kesalahan:\n$_error',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
 
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Text(
-                'Init error:\n${snapshot.error}',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        }
+    if (!_ready) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-        return const LoginSiswaPage();
-      },
-    );
+    return const LoginSiswaPage();
   }
 }

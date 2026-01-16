@@ -10,13 +10,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: Colors.white,
         body: Center(
           child: Text(
-            'APP HIDUP ✅',
+            'APP HIDUP DARI GITHUB ✅',
             style: TextStyle(fontSize: 24),
           ),
         ),

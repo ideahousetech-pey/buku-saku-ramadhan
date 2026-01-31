@@ -7,6 +7,7 @@ import 'login_guru_page.dart';
 import 'login_siswa_page.dart';
 import 'kiblat_page.dart';
 import 'jadwal_page.dart';
+import 'sholat_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -81,22 +82,49 @@ class _HomePageState extends State<HomePage> {
           SizedBox(height: 220, child: PageView(children: cards)),
           const SizedBox(height: 20),
           GridView.count(
-            crossAxisCount: 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              menu("Sholat", Icons.access_time, () {}),
-              menu("Kiblat", Icons.explore,
-                  () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const KiblatPage()))),
-              menu("Jadwal", Icons.calendar_month,
-                  () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const JadwalPage()))),
-              menu("Login", Icons.person,
-                  () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const LoginSiswaPage()))),
-            ],
-          )
+  crossAxisCount: 4,
+  shrinkWrap: true,
+  physics: const NeverScrollableScrollPhysics(),
+  children: [
+
+    menu(
+      "Sholat",
+      Icons.access_time,
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SholatPage()),
+      ),
+    ),
+
+    menu(
+      "Kiblat",
+      Icons.explore,
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const KiblatPage()),
+      ),
+    ),
+
+    menu(
+      "Jadwal",
+      Icons.calendar_month,
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const JadwalPage()),
+      ),
+    ),
+
+    menu(
+      "Login",
+      Icons.person,
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginSiswaPage()),
+      ),
+    ),
+  ],
+),
+
         ],
       ),
     );

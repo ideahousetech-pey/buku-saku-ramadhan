@@ -8,6 +8,7 @@ import '../services/location_service.dart';
 import '../services/prayer_service.dart';
 import 'jadwal_page.dart';
 import '../widgets/sun_arc_widget.dart';
+import '../services/notification_service.dart';
 
 
 class SholatPage extends StatefulWidget {
@@ -47,6 +48,15 @@ class _SholatPageState extends State<SholatPage> {
       "Maghrib": prayer.maghrib,
       "Isya": prayer.isha,
     };
+
+    for (var e in times.entries) {
+      final isSubuh = e.key == "Subuh";
+      NotificationService.scheduleAdzan(
+        e.key,
+        e.value,
+        isSubuh,
+      );
+    }
 
     List<Placemark> placemarks =
         await placemarkFromCoordinates(pos.latitude, pos.longitude);

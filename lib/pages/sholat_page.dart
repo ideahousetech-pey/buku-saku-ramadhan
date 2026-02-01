@@ -1,15 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:hijri/hijri_calendar.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/location_service.dart';
 import '../services/prayer_service.dart';
-import 'jadwal_page.dart';
+import '../services/location_service.dart';
 import '../widgets/sun_arc_widget.dart';
-import '../services/notification_service.dart';
-
 
 class SholatPage extends StatefulWidget {
   const SholatPage({super.key});
@@ -19,146 +13,128 @@ class SholatPage extends StatefulWidget {
 }
 
 class _SholatPageState extends State<SholatPage> {
-  String lokasi = "Mencari lokasi...";
-  String kota = "";
-  Map<String, bool> notif = {};
-  Map<String, DateTime> times = {};
-  DateTime? fajrTime;
-  DateTime? maghribTime;
-
+  PrayerTimes? times;
+  Timer? timer;
+  DateTime now = DateTime.now();
+  int index = 0;
 
   @override
   void initState() {
     super.initState();
-    loadData();
+    loadTimes();
+
+    timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => setState(() => now = DateTime.now()),
+    );
   }
 
-  Future<void> loadData() async {
-    final pos = await LocationService.getLocation();
-    final prayer = PrayerService.getPrayer(pos.latitude, pos.longitude);
-    fajrTime = prayer.fajr;
-    maghribTime = prayer.maghrib;
+  Future<void> loadTimes() async {
+    final city = await LocationService.getCityId();
+    final t =
+        await PrayerService.getPrayerTimes(city, now);
 
-
-    times = {
-      "Subuh": prayer.fajr,
-      "Terbit": prayer.sunrise,
-      "Dzuhur": prayer.dhuhr,
-      "Ashar": prayer.asr,
-      "Maghrib": prayer.maghrib,
-      "Isya": prayer.isha,
-    };
-
-    for (var e in times.entries) {
-      final isSubuh = e.key == "Subuh";
-      NotificationService.scheduleAdzan(
-        e.key,
-        e.value,
-        isSubuh,
-      );
-    }
-
-    List<Placemark> placemarks =
-        await placemarkFromCoordinates(pos.latitude, pos.longitude);
-
-    final p = placemarks.first;
-
-    lokasi = p.subAdministrativeArea ?? "";
-    kota = p.locality ?? "";
-
-    await loadNotif();
-    setState(() {});
+    setState(() => times = t);
   }
 
-  Future<void> loadNotif() async {
-    final prefs = await SharedPreferences.getInstance();
-    for (var key in times.keys) {
-      notif[key] = prefs.getBool(key) ?? true;
-    }
-  }
-
-  Future<void> saveNotif(String key, bool val) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setBool(key, val);
+  String countdown(DateTime next) {
+    final diff = next.difference(now);
+    return "${diff.inHours.remainder(24).toString().padLeft(2, '0')}:"
+        "${diff.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
+        "${diff.inSeconds.remainder(60).toString().padLeft(2, '0')}";
   }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final hijri = HijriCalendar.now();
+    if (times == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final list = times!.asList();
+    final current =
+        PrayerService.getCurrentPrayer(times!, now);
+
+    final next =
+        PrayerService.getNextPrayer(times!, now);
+
+    final sunrise = times!.sunrise;
+    final maghrib = times!.maghrib;
+
+    double progress = 0;
+    if (now.isAfter(sunrise) &&
+        now.isBefore(maghrib)) {
+      progress = now
+              .difference(sunrise)
+              .inMinutes /
+          maghrib
+              .difference(sunrise)
+              .inMinutes;
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(lokasi, style: const TextStyle(fontSize: 18)),
-            Text("Kemenag $kota",
-                style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_month),
-            onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const JadwalPage()));
-            },
-          )
-        ],
-      ),
-      body: ListView(
+      appBar: AppBar(title: const Text("Sholat")),
+      body: Column(
         children: [
-          const SizedBox(height: 12),
+          SunArcWidget(progress: progress),
 
-          if (fajrTime != null && maghribTime != null)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.green,
-              ),
-              child: SunArcWidget(
-                fajr: fajrTime!,
-                maghrib: maghribTime!,
-              ),
-            ),
+          Text(
+            "${current['name']} sekarang",
+            style: const TextStyle(fontSize: 20),
+          ),
 
-          Center(
-            child: Text(
-              "${DateFormat('dd MMM yyyy').format(now)} / "
-              "${hijri.hDay} ${hijri.longMonthName} ${hijri.hYear}",
-              style: const TextStyle(fontSize: 16),
+          Text(
+            countdown(next['time']),
+            style: const TextStyle(fontSize: 26),
+          ),
+
+          Expanded(
+            child: PageView.builder(
+              itemCount: list.length,
+              onPageChanged: (i) =>
+                  setState(() => index = i),
+              itemBuilder: (_, i) {
+                final p = list[i];
+
+                final active =
+                    p['name'] == current['name'];
+
+                return Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? Colors.green.shade200
+                          : Colors.white,
+                      borderRadius:
+                          BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize:
+                          MainAxisSize.min,
+                      children: [
+                        Text(
+                          p['name'],
+                          style:
+                              const TextStyle(
+                                  fontSize: 28),
+                        ),
+                        Text(
+                          p['time']
+                              .toString()
+                              .substring(11, 16),
+                          style:
+                              const TextStyle(
+                                  fontSize: 36),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          const SizedBox(height: 12),
-
-          ...times.entries.map((e) {
-            final isActive = now.isAfter(e.value) &&
-                now.difference(e.value).inHours < 2;
-
-            return Container(
-              color: isActive ? Colors.green.withValues(alpha: 0.15) : null,
-              child: ListTile(
-                title: Text(e.key,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(DateFormat('HH:mm').format(e.value)),
-                    Switch(
-                      value: notif[e.key] ?? true,
-                      onChanged: (v) {
-                        setState(() => notif[e.key] = v);
-                        saveNotif(e.key, v);
-                      },
-                    )
-                  ],
-                ),
-              ),
-            );
-          })
         ],
       ),
     );

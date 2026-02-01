@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
+import '../services/jurnal_service.dart';
 
 class JurnalPage extends StatefulWidget {
-  const JurnalPage({super.key});
+  final String siswa;
+
+  const JurnalPage({super.key, required this.siswa});
 
   @override
   State<JurnalPage> createState() => _JurnalPageState();
@@ -12,115 +13,83 @@ class JurnalPage extends StatefulWidget {
 class _JurnalPageState extends State<JurnalPage> {
   bool puasa = false;
   bool tarawih = false;
-  bool sholat = false;
+  bool subuh = false;
+  bool dzuhur = false;
+  bool ashar = false;
+  bool maghrib = false;
+  bool isya = false;
 
-  late String todayKey;
-  bool editable = true;
+  String get today =>
+      DateTime.now().toIso8601String().substring(0, 10);
 
   @override
   void initState() {
     super.initState();
-    initData();
+
+    final data =
+        JurnalService.get(widget.siswa, today);
+
+    if (data != null) {
+      puasa = data['puasa'] ?? false;
+      tarawih = data['tarawih'] ?? false;
+      subuh = data['subuh'] ?? false;
+      dzuhur = data['dzuhur'] ?? false;
+      ashar = data['ashar'] ?? false;
+      maghrib = data['maghrib'] ?? false;
+      isya = data['isya'] ?? false;
+    }
   }
 
-  /// CEK APAKAH MASIH HARI INI
-  bool isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
-  }
-
-  Future<void> initData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now();
-    todayKey = DateFormat('yyyy-MM-dd').format(today);
-
-    editable = isToday(today);
-
-    puasa = prefs.getBool("puasa_$todayKey") ?? false;
-    tarawih = prefs.getBool("tarawih_$todayKey") ?? false;
-    sholat = prefs.getBool("sholat_$todayKey") ?? false;
-
-    setState(() {});
-  }
-
-  Future<void> save() async {
-    if (!editable) return;
-
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setBool("puasa_$todayKey", puasa);
-    await prefs.setBool("tarawih_$todayKey", tarawih);
-    await prefs.setBool("sholat_$todayKey", sholat);
+  void save() {
+    JurnalService.save(widget.siswa, today, {
+      "puasa": puasa,
+      "tarawih": tarawih,
+      "subuh": subuh,
+      "dzuhur": dzuhur,
+      "ashar": ashar,
+      "maghrib": maghrib,
+      "isya": isya,
+    });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Jurnal tersimpan")),
     );
   }
 
+  Widget item(String title, bool value,
+      Function(bool?) onChanged) {
+    return CheckboxListTile(
+      title: Text(title),
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final todayText = DateFormat('dd MMM yyyy').format(DateTime.now());
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Jurnal Ibadah"),
-      ),
+      appBar: AppBar(title: const Text("Jurnal Ibadah")),
       body: ListView(
-        padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            todayText,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
+          item("Puasa", puasa,
+              (v) => setState(() => puasa = v!)),
+          item("Tarawih", tarawih,
+              (v) => setState(() => tarawih = v!)),
+          item("Subuh", subuh,
+              (v) => setState(() => subuh = v!)),
+          item("Dzuhur", dzuhur,
+              (v) => setState(() => dzuhur = v!)),
+          item("Ashar", ashar,
+              (v) => setState(() => ashar = v!)),
+          item("Maghrib", maghrib,
+              (v) => setState(() => maghrib = v!)),
+          item("Isya", isya,
+              (v) => setState(() => isya = v!)),
           const SizedBox(height: 20),
-
-          CheckboxListTile(
-            title: const Text("Puasa"),
-            value: puasa,
-            onChanged: editable
-                ? (v) => setState(() => puasa = v!)
-                : null,
-          ),
-
-          CheckboxListTile(
-            title: const Text("Tarawih"),
-            value: tarawih,
-            onChanged: editable
-                ? (v) => setState(() => tarawih = v!)
-                : null,
-          ),
-
-          CheckboxListTile(
-            title: const Text("Sholat 5 Waktu"),
-            value: sholat,
-            onChanged: editable
-                ? (v) => setState(() => sholat = v!)
-                : null,
-          ),
-
-          const SizedBox(height: 20),
-
           ElevatedButton(
-            onPressed: editable ? save : null,
+            onPressed: save,
             child: const Text("Simpan"),
           ),
-
-          if (!editable)
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Text(
-                "Hari yang sudah lewat tidak bisa diedit",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red),
-              ),
-            )
         ],
       ),
     );

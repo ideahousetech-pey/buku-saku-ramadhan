@@ -21,7 +21,7 @@ class _BuatPasswordPageState extends State<BuatPasswordPage> {
     final prefs = await SharedPreferences.getInstance();
     final key = "${namaC.text}_$kelas";
     prefs.setString(key, pass1.text);
-
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
@@ -39,7 +39,7 @@ class _BuatPasswordPageState extends State<BuatPasswordPage> {
           TextField(controller: namaC, decoration: const InputDecoration(labelText: "Nama")),
 
           DropdownButtonFormField(
-            value: kelas,
+            initialValue: kelas,
             items: KelasData.list
                 .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                 .toList(),

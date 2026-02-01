@@ -34,13 +34,6 @@ class _HomePageState extends State<HomePage> {
   String countdown = "--:--:--";
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    _timer = null;
-    super.dispose();
-  }
-
-  @override
   void initState() {
     super.initState();
     _loadData();
@@ -50,6 +43,13 @@ class _HomePageState extends State<HomePage> {
       setState(() => now = DateTime.now());
       _updateCountdown();
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _timer = null;
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -62,6 +62,8 @@ class _HomePageState extends State<HomePage> {
 
       final hijri = await HijriService.getHijriToday();
 
+      if (!mounted) return;
+
       setState(() {
         city = cityName;
         prayer = p;
@@ -70,6 +72,7 @@ class _HomePageState extends State<HomePage> {
 
       _updateCountdown();
     } catch (_) {
+      if (!mounted) return;
       setState(() => city = "Lokasi tidak tersedia");
     }
   }
@@ -100,6 +103,8 @@ class _HomePageState extends State<HomePage> {
     name = "Subuh";
 
     final diff = next.difference(now);
+
+    if (diff.isNegative) return;
 
     setState(() {
       activePrayer = name;
@@ -141,88 +146,112 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.green,
       ),
       body: IslamicBackground(
-        child: Column(
-          children: [
-            /// HEADER
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.green, Colors.teal],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(masehi(),
-                      style: const TextStyle(color: Colors.white)),
-                  Text(hijriDate,
-                      style: const TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 8),
-                  Text(city,
-                      style: const TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
-
-            /// CARD SHOLAT
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(24),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(120),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  Text(activePrayer,
-                      style: const TextStyle(
-                          fontSize: 26, color: Colors.white)),
-                  const SizedBox(height: 10),
-                  Text(countdown,
-                      style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            /// MENU
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
               children: [
-                menu("Sholat", Icons.access_time, () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SholatPage()));
-                }),
-                menu("Kiblat", Icons.explore, () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const KiblatPage()));
-                }),
-                menu("Jadwal", Icons.calendar_month, () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const JadwalPage()));
-                }),
-                menu(logged ? "Logout" : "Login", Icons.person, () {
-                  if (logged) {
-                    AuthService.logout();
-                    setState(() {});
-                  } else {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const LoginSiswaPage()))
-                        .then((_) => setState(() {}));
-                  }
-                }),
+                /// HEADER
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.green, Colors.teal],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(masehi(),
+                          style:
+                              const TextStyle(color: Colors.white)),
+                      Text(hijriDate,
+                          style: const TextStyle(
+                              color: Colors.white70)),
+                      const SizedBox(height: 8),
+                      Text(city,
+                          style:
+                              const TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+
+                /// CARD SHOLAT
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withAlpha(120),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(activePrayer,
+                          style: const TextStyle(
+                              fontSize: 26,
+                              color: Colors.white)),
+                      const SizedBox(height: 10),
+                      Text(countdown,
+                          style: const TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                /// MENU
+                Row(
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceEvenly,
+                  children: [
+                    menu("Sholat", Icons.access_time, () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const SholatPage()));
+                    }),
+                    menu("Kiblat", Icons.explore, () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const KiblatPage()));
+                    }),
+                    menu("Jadwal",
+                        Icons.calendar_month, () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const JadwalPage()));
+                    }),
+                    menu(
+                        logged ? "Logout" : "Login",
+                        Icons.person, () {
+                      if (logged) {
+                        AuthService.logout();
+                        setState(() {});
+                      } else {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const LoginSiswaPage()))
+                            .then((_) => setState(() {}));
+                      }
+                    }),
+                  ],
+                ),
+
+                const SizedBox(height: 40),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

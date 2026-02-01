@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import '../widgets/header_widget.dart';
-import '../widgets/prayer_card_widget.dart';
-import '../services/location_service.dart';
-import '../services/prayer_service.dart';
-import 'login_guru_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'login_siswa_page.dart';
+import 'sholat_page.dart';
+import 'jurnal_page.dart';
 import 'kiblat_page.dart';
 import 'jadwal_page.dart';
-import 'sholat_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,115 +15,119 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<PrayerCard> cards = [];
+  String userName = "";
 
   @override
   void initState() {
     super.initState();
-    loadPrayer();
+    loadUser();
   }
 
-  void loadPrayer() async {
-    final pos = await LocationService.getLocation();
-    final prayer = PrayerService.getPrayer(pos.latitude, pos.longitude);
-
+  Future<void> loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      cards = [
-        PrayerCard(name: "Subuh", time: prayer.fajr),
-        PrayerCard(name: "Dzuhur", time: prayer.dhuhr),
-        PrayerCard(name: "Ashar", time: prayer.asr),
-        PrayerCard(name: "Maghrib", time: prayer.maghrib),
-        PrayerCard(name: "Isya", time: prayer.isha),
-      ];
+      userName = prefs.getString("login_user") ?? "";
     });
   }
 
-  Widget menu(String title, IconData icon, VoidCallback onTap) {
+  /// MENU WIDGET
+  Widget menu(String label, IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 8,
-                    offset: const Offset(0, 4))
-              ],
-            ),
-            child: Icon(icon, color: Colors.green, size: 32),
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.green.shade400,
+            child: Icon(icon, color: Colors.white),
           ),
-          const SizedBox(height: 8),
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 12))
         ],
       ),
     );
   }
 
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove("login_user");
+    setState(() {
+      userName = "";
+    });
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => const LoginSiswaPage()));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          HeaderWidget(
-            onLoginGuru: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const LoginGuruPage())),
-          ),
-          SizedBox(height: 220, child: PageView(children: cards)),
-          const SizedBox(height: 20),
-          GridView.count(
-  crossAxisCount: 4,
-  shrinkWrap: true,
-  physics: const NeverScrollableScrollPhysics(),
-  children: [
-
-    menu(
-      "Sholat",
-      Icons.access_time,
-      () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const SholatPage()),
-      ),
-    ),
-
-    menu(
-      "Kiblat",
-      Icons.explore,
-      () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const KiblatPage()),
-      ),
-    ),
-
-    menu(
-      "Jadwal",
-      Icons.calendar_month,
-      () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const JadwalPage()),
-      ),
-    ),
-
-    menu(
-      "Login",
-      Icons.person,
-      () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginSiswaPage()),
-      ),
-    ),
-  ],
-),
-
+      appBar: AppBar(
+        title: userName.isNotEmpty
+            ? Text("Assalamualaikum, $userName")
+            : const Text("Home"),
+        actions: [
+          if (userName.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: logout,
+            ),
         ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+
+            /// GRID MENU
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 4,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                children: [
+
+                  menu(
+                    "Sholat",
+                    Icons.access_time,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SholatPage()),
+                    ),
+                  ),
+
+                  menu(
+                    "Kiblat",
+                    Icons.explore,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const KiblatPage()),
+                    ),
+                  ),
+
+                  menu(
+                    "Jadwal",
+                    Icons.calendar_month,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const JadwalPage()),
+                    ),
+                  ),
+
+                  menu(
+                    "Jurnal",
+                    Icons.book,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const JurnalPage()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

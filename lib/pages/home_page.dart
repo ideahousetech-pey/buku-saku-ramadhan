@@ -1,168 +1,149 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../services/location_service.dart';
 import '../services/prayer_service.dart';
-import '../pages/sholat_page.dart';
-import '../pages/jurnal_page.dart';
-import '../pages/login_siswa_page.dart';
+import '../services/auth_service.dart';
+import '../services/hijri_service.dart';
+import '../widgets/islamic_background.dart';
+
+import 'login_siswa_page.dart';
+import 'sholat_page.dart';
+import 'kiblat_page.dart';
+import 'jadwal_page.dart';
 
 class HomePage extends StatefulWidget {
-  final String? siswa;
-
-  const HomePage({super.key, this.siswa});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  Map<String, DateTime>? _prayerTimes;
-  String _location = "Memuat lokasi...";
-  late Timer _timer;
+  Timer? _timer;
 
-  String _activePrayer = "";
-  Duration _countdown = Duration.zero;
+  DateTime now = DateTime.now();
 
-  @override
-  void initState() {
-    super.initState();
-    _init();
+  String city = "Memuat lokasi...";
+  String hijriDate = "...";
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateActivePrayer();
-      if (mounted) setState(() {});
-    });
-  }
+  PrayerTimes? prayer;
 
-  Future<void> _init() async {
-    final locationName = await LocationService.getLocationName();
-
-    final pt = await PrayerService.getPrayerTimes(
-      locationName,
-      DateTime.now(),
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _location = locationName;
-
-      _prayerTimes = {
-        "Subuh": pt.fajr,
-        "Terbit": pt.sunrise,
-        "Dzuhur": pt.dhuhr,
-        "Ashar": pt.asr,
-        "Maghrib": pt.maghrib,
-        "Isya": pt.isha,
-      };
-
-      _updateActivePrayer();
-    });
-  }
-
-  void _updateActivePrayer() {
-    if (_prayerTimes == null) return;
-
-    final now = DateTime.now();
-    String current = "";
-    DateTime? nextTime;
-
-    for (final entry in _prayerTimes!.entries) {
-      if (now.isAfter(entry.value)) {
-        current = entry.key;
-      } else {
-        nextTime = entry.value;
-      }
-    }
-
-    _activePrayer = current;
-
-    if (nextTime != null) {
-      _countdown = nextTime.difference(now);
-    }
-  }
-
-  Widget _menuButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.green,
-              child: Icon(icon, color: Colors.white),
-            ),
-            const SizedBox(height: 6),
-            Text(label,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPrayerItem(String name, DateTime time) {
-    bool active = name == _activePrayer;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: active ? Colors.green.shade100 : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(name,
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight:
-                      active ? FontWeight.bold : FontWeight.normal)),
-          Text(
-            "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}",
-            style: const TextStyle(fontSize: 16),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrayerList() {
-    if (_prayerTimes == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Column(
-      children: _prayerTimes!.entries
-          .map((e) => _buildPrayerItem(e.key, e.value))
-          .toList(),
-    );
-  }
+  String activePrayer = "-";
+  String countdown = "--:--:--";
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
+    _timer = null;
     super.dispose();
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadData();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => now = DateTime.now());
+      _updateCountdown();
+    });
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final cityName = await LocationService.getLocationName();
+      final cityId = await LocationService.getCityId();
+
+      final p =
+          await PrayerService.getPrayerTimes(cityId, DateTime.now());
+
+      final hijri = await HijriService.getHijriToday();
+
+      setState(() {
+        city = cityName;
+        prayer = p;
+        hijriDate = hijri;
+      });
+
+      _updateCountdown();
+    } catch (_) {
+      setState(() => city = "Lokasi tidak tersedia");
+    }
+  }
+
+  void _updateCountdown() {
+    if (prayer == null) return;
+
+    final times = {
+      "Subuh": prayer!.fajr,
+      "Dzuhur": prayer!.dhuhr,
+      "Ashar": prayer!.asr,
+      "Maghrib": prayer!.maghrib,
+      "Isya": prayer!.isha,
+    };
+
+    DateTime? next;
+    String name = "";
+
+    for (var entry in times.entries) {
+      if (entry.value.isAfter(now)) {
+        next = entry.value;
+        name = entry.key;
+        break;
+      }
+    }
+
+    next ??= prayer!.fajr.add(const Duration(days: 1));
+    name = "Subuh";
+
+    final diff = next.difference(now);
+
+    setState(() {
+      activePrayer = name;
+      countdown =
+          "${diff.inHours.toString().padLeft(2, '0')}:"
+          "${(diff.inMinutes % 60).toString().padLeft(2, '0')}:"
+          "${(diff.inSeconds % 60).toString().padLeft(2, '0')}";
+    });
+  }
+
+  String masehi() =>
+      DateFormat("EEE, dd MMM yyyy", "id_ID").format(now);
+
+  Widget menu(String title, IconData icon, VoidCallback onTap) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: CircleAvatar(
+            radius: 32,
+            backgroundColor: Colors.green,
+            child: Icon(icon, color: Colors.white, size: 28),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(title),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final siswa = widget.siswa;
+    final logged = AuthService.isLoggedIn;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Buku Saku Ramadhan"),
         centerTitle: true,
+        backgroundColor: Colors.green,
       ),
-      body: SingleChildScrollView(
+      body: IslamicBackground(
         child: Column(
           children: [
+            /// HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -172,76 +153,75 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (siswa != null)
-                    Text(
-                      "Assalamualaikum $siswa",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16),
-                    ),
-                  const SizedBox(height: 4),
-                  Text(_location,
+                  Text(masehi(),
                       style: const TextStyle(color: Colors.white)),
+                  Text(hijriDate,
+                      style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 8),
-                  Text(
-                    "Countdown: "
-                    "${_countdown.inMinutes.remainder(60).toString().padLeft(2, '0')}:"
-                    "${_countdown.inSeconds.remainder(60).toString().padLeft(2, '0')}",
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  Text(city,
+                      style: const TextStyle(color: Colors.white)),
                 ],
               ),
             ),
 
-            const SizedBox(height: 12),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildPrayerList(),
+            /// CARD SHOLAT
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(120),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Text(activePrayer,
+                      style: const TextStyle(
+                          fontSize: 26, color: Colors.white)),
+                  const SizedBox(height: 10),
+                  Text(countdown,
+                      style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),
 
+            /// MENU
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _menuButton(
-                    icon: Icons.access_time,
-                    label: "Sholat",
-                    onTap: () {
-                      Navigator.push(
+                menu("Sholat", Icons.access_time, () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const SholatPage()));
+                }),
+                menu("Kiblat", Icons.explore, () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const KiblatPage()));
+                }),
+                menu("Jadwal", Icons.calendar_month, () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const JadwalPage()));
+                }),
+                menu(logged ? "Logout" : "Login", Icons.person, () {
+                  if (logged) {
+                    AuthService.logout();
+                    setState(() {});
+                  } else {
+                    Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const SholatPage()),
-                      );
-                    }),
-                _menuButton(
-                    icon: Icons.menu_book,
-                    label: "Jurnal",
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              JurnalPage(siswa: siswa ?? "Siswa"),
-                        ),
-                      );
-                    }),
-                _menuButton(
-                    icon: Icons.logout,
-                    label: "Logout",
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const LoginSiswaPage()),
-                      );
-                    }),
+                            builder: (_) => const LoginSiswaPage()))
+                        .then((_) => setState(() {}));
+                  }
+                }),
               ],
             ),
-
-            const SizedBox(height: 24),
           ],
         ),
       ),
